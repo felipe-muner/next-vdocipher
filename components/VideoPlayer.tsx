@@ -2,6 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+interface VdoCipherError {
+  code: number;
+  severity: number;
+  category: number;
+  data: unknown[];
+  handled: boolean;
+}
+
+interface VdoCipherPlayer {
+  addEventListener?: (event: string, callback: (error: VdoCipherError) => void) => void;
+}
+
 declare global {
   interface Window {
     vdo?: {
@@ -9,9 +21,7 @@ declare global {
         otp: string;
         playbackInfo: string;
         container: HTMLElement;
-      }) => {
-        addEventListener?: (event: string, callback: (error: any) => void) => void;
-      };
+      }) => VdoCipherPlayer;
     };
   }
 }
@@ -135,8 +145,8 @@ export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
           });
 
           // Listen for player errors
-          if (player) {
-            player.addEventListener('error', (error: any) => {
+          if (player && player.addEventListener) {
+            player.addEventListener('error', (error: VdoCipherError) => {
               console.error('VdoCipher player error:', error);
               if (error.code === 6007) {
                 const errorMsg = 'Domain restriction error: Please add localhost:3000 to your VdoCipher dashboard domain whitelist at https://www.vdocipher.com/dashboard/config/domain';
@@ -199,8 +209,8 @@ export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
         });
 
         // Listen for player errors
-        if (player) {
-          player.addEventListener('error', (error: any) => {
+        if (player && player.addEventListener) {
+          player.addEventListener('error', (error: VdoCipherError) => {
             console.error('VdoCipher player error:', error);
             if (error.code === 6007) {
               const errorMsg = 'Domain restriction error: Please add localhost:3000 to your VdoCipher dashboard domain whitelist at https://www.vdocipher.com/dashboard/config/domain';
