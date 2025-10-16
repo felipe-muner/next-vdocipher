@@ -96,12 +96,12 @@ export default function Home() {
                 No videos found. Upload a video to get started!
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex gap-4 overflow-x-auto pb-4">
                 {videos.map((video) => (
                   <button
                     key={video.id}
                     onClick={() => handleVideoClick(video.id)}
-                    className={`text-left p-4 rounded-lg border-2 transition-all hover:border-blue-500 hover:bg-blue-50 ${
+                    className={`flex-shrink-0 w-80 text-left p-4 rounded-lg border-2 transition-all hover:border-blue-500 hover:bg-blue-50 ${
                       currentVideoId === video.id
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200'
