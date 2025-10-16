@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
 
 const VDOCIPHER_API_SECRET = process.env.VDOCIPHER_API_SECRET;
 
@@ -23,43 +22,37 @@ export async function POST(request: NextRequest) {
     }
 
     // Get OTP from VdoCipher API
-    // Whitelist localhost for development and production domain
-    const response = await axios.post(
-      'https://dev.vdocipher.com/api/videos/' + videoId + '/otp',
+    // Relies on dashboard domain whitelist configuration
+    const response = await fetch(
+      `https://dev.vdocipher.com/api/videos/${videoId}/otp`,
       {
-        ttl: 300,
-        whitelisthref: '(localhost|none|vercel\\.app)',
-      },
-      {
+        method: 'POST',
         headers: {
-          Authorization: `Apisecret ${VDOCIPHER_API_SECRET}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Apisecret ${VDOCIPHER_API_SECRET}`,
         },
+        body: JSON.stringify({
+          ttl: 300, // 5 minutes validity
+        }),
       }
     );
 
-    const { otp, playbackInfo } = response.data;
-
-    return NextResponse.json({
-      success: true,
-      otp,
-      playbackInfo,
-    });
-  } catch (error) {
-    console.error('VdoCipher OTP error:', error);
-
-    if (axios.isAxiosError(error)) {
+    if (!response.ok) {
+      const errorData = await response.json();
       return NextResponse.json(
-        {
-          error: 'Failed to get OTP',
-          details: error.response?.data || error.message
-        },
-        { status: error.response?.status || 500 }
+        { error: 'Failed to generate OTP', details: errorData },
+        { status: response.status }
       );
     }
 
+    const data = await response.json();
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('VdoCipher OTP error:', error);
     return NextResponse.json(
-      { error: 'Failed to get OTP', details: String(error) },
+      { error: 'Internal server error', details: String(error) },
       { status: 500 }
     );
   }

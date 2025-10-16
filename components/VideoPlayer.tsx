@@ -1,85 +1,25 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-
-interface VdoCipherError {
-  code: number;
-  severity: number;
-  category: number;
-  data: unknown[];
-  handled: boolean;
-}
-
-interface VdoCipherPlayer {
-  addEventListener?: (event: string, callback: (error: VdoCipherError) => void) => void;
-}
-
-declare global {
-  interface Window {
-    vdo?: {
-      add: (config: {
-        otp: string;
-        playbackInfo: string;
-        container: HTMLElement;
-      }) => VdoCipherPlayer;
-    };
-  }
-}
+import { useEffect, useState } from 'react';
 
 interface VideoPlayerProps {
   videoId: string;
   onError?: (error: string) => void;
 }
 
+interface OTPResponse {
+  otp: string;
+  playbackInfo: string;
+}
+
 export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
-  const playerRef = useRef<HTMLDivElement>(null);
+  const [otpData, setOtpData] = useState<OTPResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [playerReady, setPlayerReady] = useState(false);
   const [videoStatus, setVideoStatus] = useState<string>('');
   const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
-    console.log('VideoPlayer mounted, videoId:', videoId);
-
-    // Load VdoCipher player script
-    const script = document.createElement('script');
-    script.src = 'https://player.vdocipher.com/playerAssets/1.6.10/vdo.js';
-    script.async = true;
-    script.onload = () => {
-      console.log('VdoCipher player script loaded successfully');
-      setPlayerReady(true);
-    };
-    script.onerror = () => {
-      console.error('Failed to load VdoCipher player script');
-      const errorMsg = 'Failed to load VdoCipher player';
-      setError(errorMsg);
-      onError?.(errorMsg);
-      setLoading(false);
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      // Cleanup script on unmount
-      console.log('VideoPlayer unmounting, removing script');
-      document.body.removeChild(script);
-    };
-  }, [onError, videoId]);
-
-  useEffect(() => {
-    console.log('initializePlayer useEffect triggered', {
-      playerReady,
-      videoId,
-      hasPlayerRef: !!playerRef.current
-    });
-
-    if (!playerReady || !videoId || !playerRef.current) {
-      console.log('Skipping initialization - conditions not met');
-      return;
-    }
-
-    console.log('All conditions met, initializing player...');
-
     const initializePlayer = async () => {
       try {
         setLoading(true);
@@ -100,17 +40,13 @@ export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
 
         const statusData = await statusResponse.json();
         const status = statusData.status?.toLowerCase() || '';
-        console.log('Video status:', status, 'Raw:', statusData.status);
         setVideoStatus(status);
 
         // Step 2: Only get OTP if video is ready
         if (status !== 'ready') {
-          console.log('Video not ready yet, status:', status);
           setLoading(false);
           return;
         }
-
-        console.log('Video is ready, fetching OTP...');
 
         // Step 3: Fetch OTP and playback info from our API
         const response = await fetch('/api/vdocipher/otp', {
@@ -122,7 +58,8 @@ export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to get playback credentials');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to get playback credentials');
         }
 
         const data = await response.json();
@@ -131,42 +68,9 @@ export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
           throw new Error('Invalid playback credentials');
         }
 
-        // Initialize VdoCipher player
-        if (window.vdo && playerRef.current) {
-          console.log('Initializing vdo player with:', {
-            otp: data.otp,
-            playbackInfo: data.playbackInfo,
-          });
-
-          const player = window.vdo.add({
-            otp: data.otp,
-            playbackInfo: data.playbackInfo,
-            container: playerRef.current,
-          });
-
-          // Listen for player errors
-          if (player && player.addEventListener) {
-            player.addEventListener('error', (error: VdoCipherError) => {
-              console.error('VdoCipher player error:', error);
-              if (error.code === 6007) {
-                const errorMsg = 'Domain restriction error: Please add localhost:3000 to your VdoCipher dashboard domain whitelist at https://www.vdocipher.com/dashboard/config/domain';
-                setError(errorMsg);
-                onError?.(errorMsg);
-              }
-            });
-          }
-
-          console.log('VdoCipher player initialized');
-        } else {
-          console.error('VdoCipher not available:', {
-            vdo: !!window.vdo,
-            container: !!playerRef.current
-          });
-        }
-
+        setOtpData(data);
         setLoading(false);
       } catch (err) {
-        console.error('Player initialization error:', err);
         const errorMsg = err instanceof Error ? err.message : 'Failed to load video';
         setError(errorMsg);
         onError?.(errorMsg);
@@ -174,8 +78,10 @@ export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
       }
     };
 
-    initializePlayer();
-  }, [playerReady, videoId, onError]);
+    if (videoId) {
+      initializePlayer();
+    }
+  }, [videoId, onError]);
 
   const loadPlayer = async () => {
     try {
@@ -200,27 +106,7 @@ export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
         throw new Error('Invalid playback credentials');
       }
 
-      // Initialize VdoCipher player
-      if (window.vdo && playerRef.current) {
-        const player = window.vdo.add({
-          otp: data.otp,
-          playbackInfo: data.playbackInfo,
-          container: playerRef.current,
-        });
-
-        // Listen for player errors
-        if (player && player.addEventListener) {
-          player.addEventListener('error', (error: VdoCipherError) => {
-            console.error('VdoCipher player error:', error);
-            if (error.code === 6007) {
-              const errorMsg = 'Domain restriction error: Please add localhost:3000 to your VdoCipher dashboard domain whitelist at https://www.vdocipher.com/dashboard/config/domain';
-              setError(errorMsg);
-              onError?.(errorMsg);
-            }
-          });
-        }
-      }
-
+      setOtpData(data);
       setLoading(false);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to load video';
@@ -246,8 +132,8 @@ export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
         const status = statusData.status?.toLowerCase() || '';
         setVideoStatus(status);
 
-        if (status === 'ready' && playerReady) {
-          // Load the player directly instead of reloading page
+        if (status === 'ready') {
+          // Load the player
           await loadPlayer();
         }
       }
@@ -339,13 +225,25 @@ export default function VideoPlayer({ videoId, onError }: VideoPlayerProps) {
         </div>
       )}
 
-      <div
-        ref={playerRef}
-        className={`w-full aspect-video rounded-lg overflow-hidden bg-black ${
-          loading || videoStatus !== 'ready' ? 'hidden' : ''
-        }`}
-        style={{ minHeight: '400px' }}
-      />
+      {otpData && videoStatus === 'ready' && (
+        <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+          <iframe
+            src={`https://player.vdocipher.com/v2/?otp=${otpData.otp}&playbackInfo=${otpData.playbackInfo}`}
+            style={{
+              border: 0,
+              maxWidth: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              height: '100%',
+              width: '100%',
+            }}
+            className="rounded-lg"
+            allowFullScreen
+            allow="encrypted-media"
+          />
+        </div>
+      )}
 
       <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h3 className="text-sm font-semibold text-blue-800 mb-2">
