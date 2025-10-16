@@ -75,8 +75,9 @@ export default function Home() {
           <VideoUpload onUploadSuccess={handleUploadSuccess} />
         </div>
 
-        {/* Video List */}
-        <div className="mb-12 max-w-4xl mx-auto">
+        {/* Two Column Layout: Video List + Test Input */}
+        <div className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Video List */}
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-xl font-bold mb-4 text-gray-800">
               Your Videos
@@ -94,7 +95,7 @@ export default function Home() {
                 No videos found. Upload a video to get started!
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-96 overflow-y-auto">
                 {videos.map((video) => (
                   <button
                     key={video.id}
@@ -115,7 +116,7 @@ export default function Home() {
                         </p>
                         <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                           <span>
-                            Uploaded: {new Date(video.upload_time * 1000).toLocaleDateString()}
+                            Uploaded: {new Date(video.upload_time * 1000).toLocaleDateString()} at {new Date(video.upload_time * 1000).toLocaleTimeString()}
                           </span>
                           <span className="capitalize">
                             Status: <span className={`font-semibold ${
@@ -139,10 +140,8 @@ export default function Home() {
               </div>
             )}
           </div>
-        </div>
 
-        {/* Test with Existing Video ID */}
-        <div className="mb-12 max-w-2xl mx-auto">
+          {/* Test with Existing Video ID */}
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-xl font-bold mb-4 text-gray-800">
               Test with Existing Video ID
@@ -150,18 +149,18 @@ export default function Home() {
             <p className="text-sm text-gray-600 mb-4">
               If you already have a video ID from VdoCipher, enter it below to test playback.
             </p>
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-4">
               <input
                 type="text"
                 value={testVideoId}
                 onChange={(e) => setTestVideoId(e.target.value)}
                 placeholder="Enter video ID (e.g., 1234abcd5678efgh)"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
               <button
                 onClick={handleTestVideo}
                 disabled={!testVideoId.trim()}
-                className="bg-green-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                className="w-full bg-green-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 Load Video
               </button>
