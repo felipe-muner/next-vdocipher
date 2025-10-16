@@ -23,12 +23,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get OTP from VdoCipher API
-    // Allow empty origin for localhost development (player detects origin as "none")
+    // Whitelist localhost for development and production domain
     const response = await axios.post(
       'https://dev.vdocipher.com/api/videos/' + videoId + '/otp',
       {
         ttl: 300,
-        whitelisthref: '(localhost|none)',
+        whitelisthref: '(localhost|none|vercel\\.app)',
       },
       {
         headers: {
