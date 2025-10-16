@@ -22,28 +22,30 @@ export default function Home() {
   const [videos, setVideos] = useState<VdoCipherVideo[]>([]);
   const [loadingVideos, setLoadingVideos] = useState<boolean>(true);
 
-  useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        setLoadingVideos(true);
-        const response = await fetch('/api/vdocipher/videos');
+  const fetchVideos = async () => {
+    try {
+      setLoadingVideos(true);
+      const response = await fetch('/api/vdocipher/videos');
 
-        if (response.ok) {
-          const data: VideosResponse = await response.json();
-          setVideos(data.rows || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch videos:', error);
-      } finally {
-        setLoadingVideos(false);
+      if (response.ok) {
+        const data: VideosResponse = await response.json();
+        setVideos(data.rows || []);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch videos:', error);
+    } finally {
+      setLoadingVideos(false);
+    }
+  };
 
+  useEffect(() => {
     fetchVideos();
   }, []);
 
   const handleUploadSuccess = (videoId: string) => {
     setCurrentVideoId(videoId);
+    // Refresh the video list to show the newly uploaded video
+    fetchVideos();
   };
 
   const handleTestVideo = () => {
@@ -75,9 +77,8 @@ export default function Home() {
           <VideoUpload onUploadSuccess={handleUploadSuccess} />
         </div>
 
-        {/* Two Column Layout: Video List + Test Input */}
-        <div className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Video List */}
+        {/* Video List */}
+        <div className="mb-12">
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-xl font-bold mb-4 text-gray-800">
               Your Videos
@@ -95,53 +96,53 @@ export default function Home() {
                 No videos found. Upload a video to get started!
               </div>
             ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {videos.map((video) => (
                   <button
                     key={video.id}
                     onClick={() => handleVideoClick(video.id)}
-                    className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:border-blue-500 hover:bg-blue-50 ${
+                    className={`text-left p-4 rounded-lg border-2 transition-all hover:border-blue-500 hover:bg-blue-50 ${
                       currentVideoId === video.id
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-900 truncate">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-semibold text-gray-900 truncate flex-1">
                           {video.title || 'Untitled Video'}
                         </h4>
-                        <p className="text-sm text-gray-500 mt-1 font-mono truncate">
-                          ID: {video.id}
-                        </p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                          <span>
-                            Uploaded: {new Date(video.upload_time * 1000).toLocaleDateString()} at {new Date(video.upload_time * 1000).toLocaleTimeString()}
-                          </span>
-                          <span className="capitalize">
-                            Status: <span className={`font-semibold ${
-                              video.status === 'ready' ? 'text-green-600' : 'text-yellow-600'
-                            }`}>
-                              {video.status}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                      {currentVideoId === video.id && (
-                        <div className="flex-shrink-0">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {currentVideoId === video.id && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0">
                             Playing
                           </span>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 font-mono truncate">
+                        ID: {video.id}
+                      </p>
+                      <div className="flex flex-col gap-1 mt-2 text-xs text-gray-500">
+                        <span>
+                          {new Date(video.upload_time * 1000).toLocaleDateString()} at {new Date(video.upload_time * 1000).toLocaleTimeString()}
+                        </span>
+                        <span className="capitalize">
+                          Status: <span className={`font-semibold ${
+                            video.status === 'ready' ? 'text-green-600' : 'text-yellow-600'
+                          }`}>
+                            {video.status}
+                          </span>
+                        </span>
+                      </div>
                     </div>
                   </button>
                 ))}
               </div>
             )}
           </div>
+        </div>
 
-          {/* Test with Existing Video ID */}
+        {/* Test with Existing Video ID */}
+        <div className="mb-12 max-w-2xl mx-auto">
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-xl font-bold mb-4 text-gray-800">
               Test with Existing Video ID
@@ -149,18 +150,18 @@ export default function Home() {
             <p className="text-sm text-gray-600 mb-4">
               If you already have a video ID from VdoCipher, enter it below to test playback.
             </p>
-            <div className="flex flex-col gap-4">
+            <div className="flex gap-4">
               <input
                 type="text"
                 value={testVideoId}
                 onChange={(e) => setTestVideoId(e.target.value)}
                 placeholder="Enter video ID (e.g., 1234abcd5678efgh)"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
               <button
                 onClick={handleTestVideo}
                 disabled={!testVideoId.trim()}
-                className="w-full bg-green-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                className="bg-green-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 Load Video
               </button>
